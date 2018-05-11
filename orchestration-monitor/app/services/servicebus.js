@@ -6,6 +6,7 @@ const config = require('../config')
 
 const connectionString = config.serviceBus.connectionString
 const topicName = config.serviceBus.topic
+const subscriptionName = config.serviceBus.subscription
 const maxAsyncCalls = config.serviceBus.maxAsyncCalls
 
 const serviceBusService = serviceBus.createServiceBusService(connectionString)
@@ -28,12 +29,29 @@ async function sendServiceBusRequestBatch (batch) {
     return error
   }
 
+  try {
+    await createSubscription()
+  } catch (error) {
+    console.error(`Failed to create subscription ${subscriptionName}.`)
+    return error
+  }
+
   await eachOfLimit(batch, maxAsyncCalls, sendTopicMessage, (error) => {
     if (error) {
       console.error('Failed to send message batch to service bus.')
       return error
     }
     return batch
+  })
+}
+
+async function createSubscription () {
+  await serviceBusService.createSubscription(topicName, subscriptionName, (error) => {
+    if (error) {
+      console.error(`Failed to create subscription ${subscriptionName}.`)
+      return error
+    }
+    return subscriptionName
   })
 }
 
